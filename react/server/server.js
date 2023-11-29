@@ -23,7 +23,7 @@ let db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE, (err) => {
     app.use(express.urlencoded({ extended: true }));
 
     // 영화 데이터를 제공하는 엔드포인트
-    app.get('/api/movies', (req, res) => {
+    /*app.get('/api/movies', (req, res) => {
       db.all('SELECT * FROM Movies', [], (err, rows) => {
         if (err) {
           console.error(err.message);
@@ -32,35 +32,48 @@ let db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE, (err) => {
           res.json(rows);
         }
       });
-    });
+    });*/
+    // 새로운 엔드포인트 추가: 영화 선택 페이지에서 필요한 데이터 조회
+      app.get('/api/selection-data', (req, res) => {
+        const query = `
+          SELECT MovieShowings.id, Movies.title AS movieTitle, Theaters.name AS theater, Times.value AS time
+          FROM MovieShowings
+          INNER JOIN Movies ON MovieShowings.movieid = Movies.movieid
+          INNER JOIN Theaters ON MovieShowings.theaterid = Theaters.theaterid
+          INNER JOIN Times ON MovieShowings.timeid = Times.timeid
+        `;
 
-    // 새로운 엔드포인트 추가: 특정 영화 상세 정보 조회
-    app.get('/api/movies/:movieId', (req, res) => {
-      const movieId = req.params.movieId;
-
-      db.get('SELECT * FROM Movies WHERE movieid = ?', [movieId], (err, row) => {
-        if (err) {
-          console.error(err.message);
-          res.status(500).json({ error: 'Internal Server Error' });
-        } else {
-          res.json(row);
-        }
+        db.all(query, [], (err, rows) => {
+          if (err) {
+            console.error(err.message);
+            res.status(500).json({ error: 'Internal Server Error' });
+          } else {
+            res.json(rows);
+          }
+        });
       });
-    });
-
-    // 새로운 엔드포인트 추가: 영화 상영 정보 조회
-    app.get('/api/showings', (req, res) => {
-      const query = 'SELECT * FROM MovieShowings';
-
-      db.all(query, [], (err, rows) => {
-        if (err) {
-          console.error(err.message);
-          res.status(500).json({ error: 'Internal Server Error' });
-        } else {
-          res.json(rows);
-        }
+      app.get('/api/showings/:movieid/all', (req, res) => {
+        const movieId = req.params.movieid;
+      
+        const query = `
+          SELECT MovieShowings.id, Movies.title AS movieTitle, Theaters.name AS theaterName, Times.value AS timeValue
+          FROM MovieShowings
+          JOIN Movies ON MovieShowings.movieid = Movies.movieid
+          JOIN Theaters ON MovieShowings.theaterid = Theaters.theaterid
+          JOIN Times ON MovieShowings.timeid = Times.timeid
+          WHERE MovieShowings.movieid = ?;
+        `;
+      
+        db.all(query, [movieId], (err, rows) => {
+          if (err) {
+            console.error(err.message);
+            res.status(500).json({ error: 'Internal Server Error' });
+          } else {
+            res.json(rows);
+          }
+        });
       });
-    });
+
 
     // 영화 좌석 데이터를 제공하는 엔드포인트
     app.get('/api/seats', (req, res) => {
@@ -73,59 +86,7 @@ let db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE, (err) => {
         }
       });
     });
-    // 새로운 엔드포인트 추가: 특정 상영 정보 조회
-    app.get('/api/showings/:showingId', (req, res) => {
-      const showingId = req.params.showingId;
-    
-      db.get('SELECT * FROM MovieShowings WHERE id = ?', [showingId], (err, row) => {
-        if (err) {
-          console.error(err.message);
-          res.status(500).json({ error: 'Internal Server Error' });
-        } else {
-          res.json(row);
-        }
-      });
-    });
-    // 새로운 엔드포인트 추가: 특정 상영의 영화 정보 조회
-    app.get('/api/showings/:showingId/movie', (req, res) => {
-      const showingId = req.params.showingId;
-    
-      db.get('SELECT Movies.* FROM Movies JOIN MovieShowings ON Movies.movieid = MovieShowings.movieid WHERE MovieShowings.id = ?', [showingId], (err, row) => {
-        if (err) {
-          console.error(err.message);
-          res.status(500).json({ error: 'Internal Server Error' });
-        } else {
-          res.json(row);
-        }
-      });
-    });
-    // 새로운 엔드포인트 추가: 특정 상영의 상영관 정보 조회
-    app.get('/api/showings/:showingId/theater', (req, res) => {
-      const showingId = req.params.showingId;
-    
-      db.get('SELECT Theaters.* FROM Theaters JOIN MovieShowings ON Theaters.theaterid = MovieShowings.theaterid WHERE MovieShowings.id = ?', [showingId], (err, row) => {
-        if (err) {
-          console.error(err.message);
-          res.status(500).json({ error: 'Internal Server Error' });
-        } else {
-          res.json(row);
-        }
-      });
-    });
-    // 새로운 엔드포인트 추가: 특정 상영의 상영 시간 정보 조회
-    app.get('/api/showings/:showingId/time', (req, res) => {
-      const showingId = req.params.showingId;
-    
-      db.get('SELECT Times.* FROM Times JOIN MovieShowings ON Times.timeid = MovieShowings.timeid WHERE MovieShowings.id = ?', [showingId], (err, row) => {
-        if (err) {
-          console.error(err.message);
-          res.status(500).json({ error: 'Internal Server Error' });
-        } else {
-          res.json(row);
-        }
-      });
-    });
-
+ 
     // 정적 파일을 제공할 디렉토리 설정
     app.use(express.static(path.join(__dirname, '../build')));
 
